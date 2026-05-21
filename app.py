@@ -46,8 +46,12 @@ def inject_css():
             color: #edf4ff;
         }
 
+        header[data-testid="stHeader"] {
+            background: #ffffff;
+        }
+
         .block-container {
-            padding-top: 1.4rem;
+            padding-top: 5.5rem;
             padding-bottom: 2rem;
         }
 
@@ -84,8 +88,34 @@ def inject_css():
             color: #111827 !important;
         }
 
-        [data-testid="stSidebar"] button {
+        button,
+        button *,
+        [data-testid="stBaseButton-secondary"],
+        [data-testid="stBaseButton-secondary"] *,
+        [data-testid="stBaseButton-primary"],
+        [data-testid="stBaseButton-primary"] *,
+        [data-testid="stDownloadButton"] button,
+        [data-testid="stDownloadButton"] button * {
             color: #ffffff !important;
+            font-weight: 700 !important;
+        }
+
+        [data-testid="stBaseButton-secondary"] {
+            background: linear-gradient(90deg, #1d7cff, #8a3ffc) !important;
+            border: 0 !important;
+            border-radius: 10px !important;
+        }
+
+        [data-testid="stBaseButton-primary"] {
+            background: linear-gradient(90deg, #1d7cff, #8a3ffc) !important;
+            border: 0 !important;
+            border-radius: 10px !important;
+        }
+
+        [data-testid="stDownloadButton"] button {
+            background: linear-gradient(90deg, #1d7cff, #8a3ffc) !important;
+            border: 0 !important;
+            border-radius: 10px !important;
         }
 
         h1, h2, h3 {
@@ -340,11 +370,6 @@ def inject_css():
             text-align: center;
             padding: 1rem 0 0.2rem 0;
         }
-
-        button[kind="primary"] {
-            background: linear-gradient(90deg, #1d7cff, #8a3ffc);
-            border: 0;
-        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -518,6 +543,7 @@ def make_report(results, profile, elapsed, fetched_trials):
         "",
         "Top Matches:",
     ]
+
     for idx, row in enumerate(results.itertuples(index=False), start=1):
         lines.extend(
             [
@@ -528,6 +554,7 @@ def make_report(results, profile, elapsed, fetched_trials):
                 f"   URL: {row.ClinicalTrialsUrl}",
             ]
         )
+
     lines.append("")
     lines.append("Disclaimer: This prototype supports research review only and does not replace clinical judgment.")
     return "\n".join(lines)
@@ -549,6 +576,7 @@ with st.sidebar:
     st.divider()
 
     profile_name = st.selectbox("Demo profile", list(DEMO_PROFILES.keys()))
+
     if st.button("Load Demo Profile", use_container_width=True):
         sync_profile(profile_name)
 
@@ -560,9 +588,27 @@ with st.sidebar:
     gender = st.selectbox("Gender", ["Female", "Male", "All"], key="gender")
     medications = st.text_input("Medications", key="medications")
     notes = st.text_area("Patient notes", key="notes")
-    max_studies = st.slider("Trials to fetch from API", min_value=25, max_value=300, value=100, step=25)
-    top_k = st.slider("Results to show", min_value=3, max_value=20, value=5)
-    search_clicked = st.button("Find Matching Trials", type="primary", use_container_width=True)
+
+    max_studies = st.slider(
+        "Trials to fetch from API",
+        min_value=25,
+        max_value=300,
+        value=100,
+        step=25,
+    )
+
+    top_k = st.slider(
+        "Results to show",
+        min_value=3,
+        max_value=20,
+        value=5,
+    )
+
+    search_clicked = st.button(
+        "Find Matching Trials",
+        type="primary",
+        use_container_width=True,
+    )
 
     st.divider()
     st.caption("Live source: ClinicalTrials.gov API v2")
@@ -578,6 +624,7 @@ profile = {
 if search_clicked:
     with st.spinner("Fetching live trials and building the matching model..."):
         start = time.perf_counter()
+
         try:
             results = match_patient(
                 age=age,
@@ -591,10 +638,12 @@ if search_clicked:
         except Exception as error:
             st.error(f"Could not fetch or match trials: {error}")
             st.stop()
+
         elapsed = time.perf_counter() - start
 
     results = results.copy()
     results["MatchPercent"] = results["FinalScore"].apply(score_to_percent)
+
     st.session_state["results"] = results
     st.session_state["elapsed"] = elapsed
     st.session_state["fetched_trials"] = max_studies
@@ -609,7 +658,9 @@ st.markdown("")
 
 if results is None:
     st.markdown("### Executive Dashboard Preview")
+
     c1, c2, c3, c4 = st.columns(4)
+
     with c1:
         render_metric("API Status", "Ready", "Live registry connection")
     with c2:
@@ -620,7 +671,9 @@ if results is None:
         render_metric("Trials Analyzed", "--", "Live API fetch")
 
     st.markdown("### What This Dashboard Will Show")
+
     preview_left, preview_right = st.columns([1.2, 1])
+
     with preview_left:
         st.markdown(
             """
@@ -634,15 +687,21 @@ if results is None:
             """,
             unsafe_allow_html=True,
         )
+
     with preview_right:
         st.info("Load a demo profile or enter your own patient profile, then click Find Matching Trials.")
+
 else:
     match_accuracy, eligibility_accuracy, best_match, api_latency, trial_count = build_dashboard_metrics(
-        results, elapsed, fetched_trials
+        results,
+        elapsed,
+        fetched_trials,
     )
 
     st.markdown("### Executive Metrics")
+
     c1, c2, c3, c4 = st.columns(4)
+
     with c1:
         render_metric("Overall Accuracy", f"{match_accuracy}%", "Average top-result confidence")
     with c2:
@@ -653,8 +712,10 @@ else:
         render_metric("API + Model Time", f"{api_latency}s", f"{trial_count} live trials analyzed")
 
     spotlight_col, chart_col = st.columns([0.9, 1.4])
+
     with spotlight_col:
         render_best_match(results)
+
     with chart_col:
         st.markdown("#### Trial Match Scoreboard")
         score_data = results[["NCTId", "MatchPercent"]].rename(columns={"MatchPercent": "Match %"})
@@ -662,10 +723,12 @@ else:
 
         status_data = results["OverallStatus"].value_counts().reset_index()
         status_data.columns = ["Trial Status", "Count"]
+
         st.markdown("#### Trial Status Distribution")
         st.bar_chart(status_data, x="Trial Status", y="Count", color="#1d7cff")
 
     left, right = st.columns([1.35, 1])
+
     with left:
         st.markdown("### Top Matching Trials")
         render_trial_cards(results)
@@ -689,6 +752,7 @@ else:
         st.line_chart(insight_data, x="Metric", y="Accuracy", color="#8a3ffc")
 
     st.markdown("### Detailed Results")
+
     st.dataframe(
         results[
             [
@@ -713,7 +777,9 @@ else:
 
     report_text = make_report(results, active_profile, elapsed, fetched_trials).encode("utf-8")
     csv = results.to_csv(index=False).encode("utf-8")
+
     download_left, download_right = st.columns(2)
+
     with download_left:
         st.download_button(
             "Download Executive Match Report",
@@ -722,6 +788,7 @@ else:
             mime="text/plain",
             use_container_width=True,
         )
+
     with download_right:
         st.download_button(
             "Download Results CSV",
@@ -739,6 +806,4 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
-            
-                        
-            
+        
